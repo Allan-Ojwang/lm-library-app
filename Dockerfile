@@ -38,5 +38,5 @@ COPY nginx/default.conf /etc/nginx/conf.d/default.conf
 # Expose port 80 for the web server
 EXPOSE 80
 
-# Start PHP-FPM and Nginx
-CMD service nginx start && php-fpm
+# Start PHP-FPM and Nginx in the foreground
+CMD ["sh", "-c", "service nginx start && php-fpm -R"]
