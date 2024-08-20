@@ -13,7 +13,8 @@ RUN apt-get update && apt-get install -y \
     unzip \
     git \
     nodejs \
-    npm
+    npm \
+    nginx
 
 # Install PHP extensions
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
@@ -31,8 +32,11 @@ RUN npm install
 # Build Tailwind CSS and other assets
 RUN npm run build
 
-# Expose port 80
+# Copy the Nginx configuration file
+COPY nginx/default.conf /etc/nginx/conf.d/default.conf
+
+# Expose port 80 for the web server
 EXPOSE 80
 
-# Start PHP-FPM server
-CMD ["php-fpm"]
+# Start PHP-FPM and Nginx
+CMD service nginx start && php-fpm
