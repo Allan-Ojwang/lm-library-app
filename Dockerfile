@@ -1,42 +1,48 @@
-# Use an official PHP runtime as a parent image
-FROM php:8.2-fpm
+# Use an official PHP image with Apache
+FROM php:8.2-apache
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    zip \
+    unzip \
+    libpng-dev \
+    libjpeg62-turbo-dev \
+    libfreetype6-dev \
+    libonig-dev \
+    libxml2-dev \
+    libzip-dev \
+    nodejs \
+    npm \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install pdo pdo_mysql mbstring zip exif pcntl gd
+
+# Enable Apache mod_rewrite
+RUN a2enmod rewrite
 
 # Set working directory
 WORKDIR /var/www/html
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    libpng-dev \
-    libjpeg-dev \
-    libfreetype6-dev \
-    libzip-dev \
-    unzip \
-    git \
-    nodejs \
-    npm \
-    nginx
-
-# Install PHP extensions
-RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install gd zip pdo pdo_mysql
-
 # Install Composer
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Copy the application code
+# Copy the Laravel project files
 COPY . .
 
-# Install Node.js packages
-RUN npm install
+# Install PHP dependencies
+RUN composer install --no-dev --optimize-autoloader
 
-# Build Tailwind CSS and other assets
-RUN npm run build
+# Install Node.js dependencies
+RUN npm install && npm run build
 
-# Copy the Nginx configuration file
-COPY nginx/default.conf /etc/nginx/conf.d/default.conf
+# Set file permissions
+RUN chown -R www-data:www-data /var/www/html \
+    && chmod -R 775 /var/www/html/storage \
+    && chmod -R 775 /var/www/html/bootstrap/cache
 
-# Expose port 80 for the web server
+# Expose port 80
 EXPOSE 80
 
-# Start PHP-FPM and Nginx in the foreground
-CMD ["sh", "-c", "service nginx start && php-fpm -R"]
+# Start Apache in the foreground
+CMD ["apache2-foreground"]
