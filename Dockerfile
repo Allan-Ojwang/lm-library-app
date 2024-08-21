@@ -1,10 +1,11 @@
-# Base image for PHP
 FROM php:8.2-fpm
 
-# Install system dependencies
+# Install system dependencies and PHP extensions
 RUN apt-get update && apt-get install -y \
-    git \
+    nginx \
+    supervisor \
     curl \
+    git \
     zip \
     unzip \
     libpng-dev \
@@ -13,11 +14,8 @@ RUN apt-get update && apt-get install -y \
     libonig-dev \
     libxml2-dev \
     libzip-dev \
-    libssl-dev \
     nodejs \
     npm \
-    nginx \
-    supervisor \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install pdo pdo_mysql mbstring zip exif pcntl gd
 
