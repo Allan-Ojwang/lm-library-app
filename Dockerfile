@@ -1,5 +1,5 @@
-# Use an official PHP image with Apache
-FROM php:8.2-apache
+# Base image for PHP
+FROM php:8.2-fpm
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -13,19 +13,19 @@ RUN apt-get update && apt-get install -y \
     libonig-dev \
     libxml2-dev \
     libzip-dev \
+    libssl-dev \
     nodejs \
     npm \
+    nginx \
+    supervisor \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install pdo pdo_mysql mbstring zip exif pcntl gd
 
-# Enable Apache mod_rewrite
-RUN a2enmod rewrite
+# Install Composer
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 # Set working directory
 WORKDIR /var/www/html
-
-# Install Composer
-COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 # Copy the Laravel project files
 COPY . .
@@ -33,16 +33,22 @@ COPY . .
 # Install PHP dependencies
 RUN composer install --no-dev --optimize-autoloader
 
-# Install Node.js dependencies
+# Install Node.js dependencies and build assets
 RUN npm install && npm run build
 
-# Set file permissions
+# Set permissions for Laravel
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 775 /var/www/html/storage \
     && chmod -R 775 /var/www/html/bootstrap/cache
 
+# Copy Nginx configuration
+COPY ./docker/nginx/nginx.conf /etc/nginx/nginx.conf
+
+# Copy Supervisor configuration
+COPY ./docker/supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
 # Expose port 80
 EXPOSE 80
 
-# Start Apache in the foreground
-CMD ["apache2-foreground"]
+# Start Supervisor to manage Nginx and PHP-FPM
+CMD ["/usr/bin/supervisord"]
